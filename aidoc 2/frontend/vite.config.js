@@ -5,7 +5,7 @@ export default defineConfig({
     port: 5173,
     watch: {
       ignored: [
-        "**/docuagent-backend/**",
+        "**/backend/**",
         "**/.venv/**",
         "**/.venv*/**",
         "**/.tmp/**",

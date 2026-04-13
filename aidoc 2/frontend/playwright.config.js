@@ -6,12 +6,12 @@ export default defineConfig({
   retries: 0,
   timeout: 30_000,
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: "http://127.0.0.1:8003",
     trace: "on-first-retry",
   },
   webServer: {
-    command: 'cmd /c "set VITE_API_BASE_URL=http://127.0.0.1:4173&& npm run dev -- --host 127.0.0.1 --port 4173"',
-    url: "http://127.0.0.1:4173",
+    command: 'cmd /c "cd .. && python -m uvicorn backend.main:app --host 127.0.0.1 --port 8003"',
+    url: "http://127.0.0.1:8003",
     reuseExistingServer: true,
     timeout: 120_000,
   },

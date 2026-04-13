@@ -1,4 +1,4 @@
-# DocuAgent Frontend (React + Vite)
+# DocuAgent Frontend
 
 ## Stack
 - React 18
@@ -15,26 +15,14 @@
 - manage users and roles when signed in as admin
 
 ## Run
-1. Install Node.js 18+.
-2. Install deps:
-   ```bash
-   npm install
-   ```
-3. Start dev server:
-   ```bash
-   npm run dev
-   ```
+Start the backend with Uvicorn and open `http://localhost:8003`.
 
-For local use, no frontend env file is required if the backend runs on the same machine. The frontend will default to the current browser host on port `8003` when `VITE_API_BASE_URL` is not set.
+The backend serves the checked-in frontend bundle from `frontend/dist`, so the app runs from one origin and the frontend calls the backend through relative `/api` routes.
 
-## Environment (`docuagent-frontend/.env`)
+## Environment
+No frontend-specific environment variables are required for normal use.
 
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8003
-```
-
-- `VITE_API_BASE_URL` defaults to `http://<current-browser-host>:8003` if unset, which is useful for EC2-style deployments.
-- If a deployed build still contains `http://localhost:8003`, the frontend rewrites it to the current browser host automatically.
+If you change the React source, rebuild `frontend/dist` before shipping those changes.
 
 ## Tests
 
