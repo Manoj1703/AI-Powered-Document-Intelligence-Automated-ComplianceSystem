@@ -26,15 +26,14 @@ MONGO_URI=<your-mongodb-uri>
 OPENAI_API_KEY=<your-openai-key>
 ```
 
-Then start the backend once with `uvicorn`.
+Then start the backend once with Uvicorn.
 
 ## Run Locally
 
 Backend and frontend:
 
 ```bash
-cd "aidoc 2"
-uvicorn backend.main:app --reload --port 8003
+python -m uvicorn backend.main:app --reload --port 8003
 ```
 
 Open the app at:
@@ -45,8 +44,8 @@ http://localhost:8003
 
 ## Important Notes
 
-- The backend serves the checked-in frontend bundle from `frontend/dist`, so no `npm install` or `npm run dev` is needed at runtime.
-- If you change the React source, regenerate `frontend/dist` before shipping those changes.
+- The backend serves the checked-in frontend bundle from `frontend/dist`, so the app runs from one Uvicorn process and the frontend talks to the backend through relative `/api` routes.
+- If you change the React source, rebuild `frontend/dist` before shipping those changes.
 - If `MONGO_URI` is omitted, the backend boots with `mongodb://localhost:27017` so `uvicorn` can start; the API still needs a reachable MongoDB for login, uploads, and dashboards.
 - In local development, the backend uses a built-in dev JWT secret if `JWT_SECRET` is not set.
 - For production, set a real `JWT_SECRET` and a real `MONGO_URI`.
