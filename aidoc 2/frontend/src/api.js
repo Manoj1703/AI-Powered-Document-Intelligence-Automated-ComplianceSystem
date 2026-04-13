@@ -1,81 +1,24 @@
-const DEFAULT_LOCAL_API_BASE_URL = "http://localhost:8003";
-
-function isLoopbackHostname(hostname) {
-  const value = String(hostname || "").trim().toLowerCase();
-  return value === "localhost" || value === "127.0.0.1" || value === "::1";
-}
-
-export function resolveApiBaseUrl(explicitBaseUrl = "", locationLike = typeof window !== "undefined" ? window.location : null) {
-  const configuredBaseUrl = String(explicitBaseUrl || "").trim();
-  if (configuredBaseUrl) {
-    try {
-      const parsed = new URL(configuredBaseUrl);
-      const browserHostname = String(locationLike?.hostname || "").trim();
-      if (browserHostname && !isLoopbackHostname(browserHostname) && isLoopbackHostname(parsed.hostname)) {
-        const protocol = String(locationLike?.protocol || parsed.protocol || "http:").replace(/:$/, "");
-        const port = parsed.port || "8003";
-        return `${protocol}://${browserHostname}:${port}`;
-      }
-    } catch {
-      // Fall through to the configured value if parsing fails.
-    }
-    return configuredBaseUrl;
-  }
-
-  if (locationLike && typeof locationLike.hostname === "string" && locationLike.hostname.trim()) {
-    const protocol = String(locationLike.protocol || "http:").replace(/:$/, "");
-    const hostname = locationLike.hostname.trim();
-    return `${protocol}://${hostname}:8003`;
-  }
-
-  return DEFAULT_LOCAL_API_BASE_URL;
-}
-
-const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
-const FALLBACK_API_BASE_URL = API_BASE_URL.includes("localhost")
-  ? API_BASE_URL.replace("localhost", "127.0.0.1")
-  : API_BASE_URL.includes("127.0.0.1")
-    ? API_BASE_URL.replace("127.0.0.1", "localhost")
-    : "";
-
 function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function _networkError(baseUrl) {
-  const detail = (() => {
-    try {
-      const parsed = new URL(baseUrl);
-      const host = parsed.hostname || "127.0.0.1";
-      const port = parsed.port || "8003";
-      return `${host}:${port}`;
-    } catch {
-      return "127.0.0.1:8003";
-    }
-  })();
-  return new Error(
-    `Backend is not reachable at ${baseUrl}. Start the API server and retry. Expected API endpoint: ${detail}.`,
-  );
+function _networkError() {
+  return new Error("Backend is not reachable. Start Uvicorn and retry.");
 }
 
-async function _tryFetch(baseUrl, path, options = {}) {
+async function _tryFetch(path, options = {}) {
   try {
-    return await fetch(`${baseUrl}${path}`, {
+    return await fetch(path, {
       credentials: "include",
       ...options,
     });
   } catch {
-    throw _networkError(baseUrl);
+    throw _networkError();
   }
 }
 
 async function apiFetch(path, options = {}) {
-  try {
-    return await _tryFetch(API_BASE_URL, path, options);
-  } catch (err) {
-    if (!FALLBACK_API_BASE_URL || FALLBACK_API_BASE_URL === API_BASE_URL) throw err;
-    return _tryFetch(FALLBACK_API_BASE_URL, path, options);
-  }
+  return _tryFetch(path, options);
 }
 
 async function authFetch(path, token, options = {}) {
@@ -89,7 +32,7 @@ async function authFetch(path, token, options = {}) {
 }
 
 function toErrorMessage(data, fallbackPrefix, status) {
-  const detail = data?.detail;
+  const detail = data?.detail ?? data?.error;
   if (typeof detail === "string" && detail.trim()) return detail;
   if (Array.isArray(detail) && detail.length > 0) {
     const parts = detail
