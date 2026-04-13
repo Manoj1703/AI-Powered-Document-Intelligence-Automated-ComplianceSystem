@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchSignupMeta } from "../api";
 import CustomDropdown from "../components/CustomDropdown";
+import CustomToggle from "../components/CustomToggle";
 import {
   IconAlert,
   IconCheckCircle,

@@ -24,9 +24,9 @@ function Documents({ documents, loading, onView, onDelete }) {
     const q = deferredQuery.trim().toLowerCase();
     return indexedDocuments
       .filter(({ doc, searchText }) => {
-        const passRisk = risk === "All" || prettyRisk(doc.overall_risk_level) === risk;
-        const passQuery = !q || searchText.includes(q);
-        return passRisk && passQuery;
+      const passRisk = risk === "All" || prettyRisk(doc.overall_risk_level) === risk;
+      const passQuery = !q || searchText.includes(q);
+      return passRisk && passQuery;
       })
       .map(({ doc }) => doc);
   }, [indexedDocuments, deferredQuery, risk]);
