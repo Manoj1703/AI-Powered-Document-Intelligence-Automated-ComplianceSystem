@@ -15,6 +15,7 @@ load_dotenv(dotenv_path=_BACKEND_ROOT / ".env")
 MONGO_URI = os.getenv("MONGO_URI") or "mongodb://localhost:27017"
 if not os.getenv("MONGO_URI"):
     print(f"[startup-warning] MONGO_URI not set, defaulting to {MONGO_URI}")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME") or "DocuAgent"
 
 class DatabaseUnavailableError(RuntimeError):
     pass
@@ -55,11 +56,12 @@ def _get_db():
         return _db
     try:
         _client = _connect_with_dns_fallback(MONGO_URI)
-        _db = _client["DocuAgent"]
+        _db = _client[MONGO_DB_NAME]
         return _db
     except Exception as exc:
         raise DatabaseUnavailableError(
             f"MongoDB is unreachable for MONGO_URI={MONGO_URI!r}. "
+            f"Using database {MONGO_DB_NAME!r}. "
             "If using localhost, ensure MongoDB service is running. "
             "If using Atlas, verify URI, credentials, and Network Access allowlist."
         ) from exc

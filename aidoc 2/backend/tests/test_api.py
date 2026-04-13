@@ -64,9 +64,14 @@ class ApiTests(unittest.TestCase):
         app.dependency_overrides.pop(get_current_user, None)
 
     def test_healthcheck(self):
-        response = self.client.get("/")
+        response = self.client.get("/api/health")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok", "service": "DocuAgent Backend"})
+
+    def test_root_serves_frontend_shell(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers.get("content-type", ""))
 
     @patch("app.routes.upload.get_collection", return_value=UploadCollection())
     @patch("app.routes.upload.extract_text_by_extension", return_value="sample legal text")

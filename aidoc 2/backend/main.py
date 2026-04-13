@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 import os
@@ -25,33 +24,31 @@ except ModuleNotFoundError as exc:
     from routes import auth, dashboard, documents, upload, users
 
 
-_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+_BACKEND_ROOT = Path(__file__).resolve().parent
 _PROJECT_ROOT = _BACKEND_ROOT.parent
-_FRONTEND_DIST_CANDIDATES = [
-    _PROJECT_ROOT / "frontend" / "dist",
-    _PROJECT_ROOT / "docuagent-frontend" / "dist",
-    _PROJECT_ROOT / "dist",
-]
+
+
+def _frontend_roots() -> list[Path]:
+    # Look in the module tree first, then the current working directory.
+    # This keeps the app resilient when Uvicorn is started from a sibling checkout
+    # or from a different app directory.
+    roots: list[Path] = []
+    seen: set[Path] = set()
+    for anchor in (Path(__file__).resolve().parent, Path.cwd().resolve()):
+        for root in (anchor, *anchor.parents):
+            if root in seen:
+                continue
+            seen.add(root)
+            roots.append(root)
+    return roots
 
 
 def _get_frontend_dist() -> Path | None:
-    return next((path for path in _FRONTEND_DIST_CANDIDATES if path.exists()), None)
-
-
-def _cors_origins() -> list[str]:
-    raw = str(os.getenv("CORS_ORIGINS") or "").strip()
-    if raw:
-        return [item.strip() for item in raw.split(",") if item.strip()]
-    return [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
-
-
-def _cors_origin_regex() -> str:
-    # Allow local dev frontends and browser origins served from a public host/IP.
-    # Exact production origins can still be locked down with CORS_ORIGINS.
-    return r"^https?://([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*|\d{1,3}(?:\.\d{1,3}){3})(:\d+)?$"
+    for root in _frontend_roots():
+        for candidate in (root / "frontend" / "dist", root / "dist"):
+            if candidate.is_dir():
+                return candidate
+    return None
 
 
 def _is_db_unavailable(exc: Exception) -> bool:
@@ -61,29 +58,24 @@ def _is_db_unavailable(exc: Exception) -> bool:
     return "mongodb is unreachable" in message or "database unavailable" in message
 
 
+def _database_unavailable_payload() -> dict[str, str]:
+    message = "Database unavailable. Please check internet/DNS and MongoDB connectivity."
+    return {"detail": message, "error": message}
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Ensure the unique admin account exists if configured via env.
     try:
         ensure_admin_user()
     except Exception as exc:
-      # Allow API process to start even when DB is temporarily unreachable.
-      print(f"[startup-warning] ensure_admin_user skipped: {exc}")
+        # Allow API process to start even when DB is temporarily unreachable.
+        print(f"[startup-warning] ensure_admin_user skipped: {exc}")
     yield
 
 
 # Basic app details shown in API docs.
 app = FastAPI(title="DocuAgent Backend", version="1.0.0", lifespan=lifespan)
-
-# Allow local frontend apps during development.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins(),
-    allow_origin_regex=_cors_origin_regex(),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 # Healthcheck API: confirms backend is running.
@@ -98,10 +90,7 @@ async def security_headers_middleware(request: Request, call_next):
         response = await call_next(request)
     except Exception as exc:
         if _is_db_unavailable(exc):
-            return JSONResponse(
-                status_code=503,
-                content={"error": "Database unavailable. Please check internet/DNS and MongoDB connectivity."},
-            )
+            return JSONResponse(status_code=503, content=_database_unavailable_payload())
         raise
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
@@ -113,14 +102,11 @@ async def security_headers_middleware(request: Request, call_next):
 @app.exception_handler(Exception)
 async def global_exception_handler(_request: Request, exc: Exception):
     if _is_db_unavailable(exc):
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Database unavailable. Please check internet/DNS and MongoDB connectivity."},
-        )
+        return JSONResponse(status_code=503, content=_database_unavailable_payload())
 
     # If SHOW_TRACEBACK=true, include full traceback in error response.
     show_trace = os.getenv("SHOW_TRACEBACK", "false").lower() == "true"
-    content = {"error": str(exc)}
+    content = {"detail": str(exc), "error": str(exc)}
     if show_trace:
         content["trace"] = traceback.format_exc()
     return JSONResponse(status_code=500, content=content)

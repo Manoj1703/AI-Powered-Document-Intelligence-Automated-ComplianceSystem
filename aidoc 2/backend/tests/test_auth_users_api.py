@@ -135,7 +135,6 @@ class AuthUsersApiTests(unittest.TestCase):
 
     def test_openapi_has_expected_paths(self):
         expected = {
-            "/",
             "/api/upload",
             "/api/documents",
             "/api/documents/{doc_id}",

@@ -12,7 +12,7 @@ import httpx
 from openai import OpenAI
 
 # Load .env values from the backend root so startup works from any working directory.
-_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(dotenv_path=_BACKEND_ROOT / ".env")
 
 # Support either custom variable names or standard OpenAI names.
